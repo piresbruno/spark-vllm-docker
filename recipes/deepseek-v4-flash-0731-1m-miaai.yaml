@@ -28,7 +28,7 @@ mods:
   - mods/drop-caches
 
 defaults:
-  port: 8000
+  port: 8081
   host: 0.0.0.0
   tensor_parallel: 2
   gpu_memory_utilization: 0.85
