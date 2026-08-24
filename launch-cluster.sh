@@ -1317,20 +1317,43 @@ verify_cluster_image_consistency() {
     local worker
     local worker_image_id
     local image_error=false
+    local id_mismatch=false
     for worker in "${PEER_NODES[@]}"; do
         if ! worker_image_id=$(ssh -o BatchMode=yes -o StrictHostKeyChecking=no "$worker" "$inspect_cmd" 2>/dev/null) || [[ -z "$worker_image_id" ]]; then
             echo "Error: Could not inspect image '$IMAGE_NAME' on worker node ($worker)."
             echo "       The image may be missing or inaccessible to the remote user."
             image_error=true
         elif [[ "$worker_image_id" != "$head_image_id" ]]; then
-            echo "Error: Docker image mismatch on worker node ($worker):"
-            echo "       Head:   $head_image_id"
-            echo "       Worker: $worker_image_id"
-            image_error=true
+            echo "Warning: Docker image ID mismatch on worker node ($worker):"
+            echo "         Head:   $head_image_id"
+            echo "         Worker: $worker_image_id"
+            id_mismatch=true
         else
             echo "  [WORKER] $worker: $worker_image_id (match)"
         fi
     done
+
+    # If image IDs differ (e.g. non-reproducible local builds or a moved
+    # :latest tag), fall back to comparing the vLLM version hash, which is
+    # the meaningful consistency check for TP-rank code identity.
+    if [[ "$id_mismatch" == "true" ]]; then
+        local head_version
+        head_version=$(docker run --rm --entrypoint python3 "$IMAGE_NAME" -c "import vllm; print(vllm.__version__)" 2>/dev/null)
+        local version_cmd
+        printf -v version_cmd "docker run --rm --entrypoint python3 %q -c \"import vllm; print(vllm.__version__)\" 2>/dev/null" "$IMAGE_NAME"
+        echo "  [HEAD] vLLM version: $head_version"
+        local worker
+        local worker_version
+        for worker in "${PEER_NODES[@]}"; do
+            worker_version=$(ssh -o BatchMode=yes -o StrictHostKeyChecking=no "$worker" "$version_cmd" 2>/dev/null)
+            if [[ -n "$worker_version" && "$worker_version" == "$head_version" ]]; then
+                echo "  [WORKER] $worker: vLLM $worker_version (version match)"
+            else
+                echo "Error: vLLM version mismatch on worker node ($worker): head='$head_version' worker='$worker_version'"
+                image_error=true
+            fi
+        done
+    fi
 
     if [[ "$image_error" == "true" ]]; then
         echo "Error: Cluster launch aborted because image '$IMAGE_NAME' is not in sync."

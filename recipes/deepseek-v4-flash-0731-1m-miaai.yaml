@@ -4,12 +4,11 @@
 # (1M-token context, seqs=8, gpu 0.85, DSpark k=5, thinking=max) onto the
 # eugr B12X serving stack.
 #
-# NOTE: the MiaAI recipe serves --kv-cache-dtype nvfp4_ds_mla (dense NVFP4 KV,
-# which is what lets it hold a 1M context). That dtype is *present* in the B12X
-# image but the B12X_MLA_SPARSE attention backend has not been validated with
-# it here. If the stack fails to boot or the KV pool is wrong, fall back to
-# --kv-cache-dtype fp8 and lower max_model_len (see the sibling
-# deepseek-v4-flash-0731.yaml recipe).
+# NOTE: the MiaAI recipe serves --kv-cache-dtype nvfp4_ds_mla, but the eugr
+# B12X vLLM REJECTS nvfp4 KV for MLA models ("nvfp4 KV cache is not supported
+# with MLA backends") — verified live 2026-08-24. Use fp8 here; if the KV
+# pool cannot hold 1M context, lower max_model_len (or raise
+# gpu_memory_utilization).
 
 recipe_version: "1"
 name: DeepSeek-V4-Flash-0731 (MiaAI 1M)
@@ -64,7 +63,7 @@ command: |
       --port {port} \
       --trust-remote-code \
       --tensor-parallel-size {tensor_parallel} \
-      --kv-cache-dtype nvfp4_ds_mla \
+      --kv-cache-dtype fp8 \
       --block-size {block_size} \
       --max-model-len {max_model_len} \
       --max-num-seqs {max_num_seqs} \
