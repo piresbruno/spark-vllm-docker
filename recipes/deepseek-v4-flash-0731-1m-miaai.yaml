@@ -32,7 +32,7 @@ defaults:
   port: 8081
   host: 0.0.0.0
   tensor_parallel: 2
-  gpu_memory_utilization: 0.85
+  gpu_memory_utilization: 0.86
   max_model_len: 1048576
   block_size: 256
   max_num_seqs: 8
