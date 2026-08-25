@@ -24,6 +24,8 @@ cluster_only: true
 mods:
   - mods/instanttensor-hybrid-draft-loader
   - mods/suppress-stops-in-reasoning
+  - mods/assistant-final-continuation
+  - mods/tool-call-truncation
   - mods/drop-caches
 
 defaults:
