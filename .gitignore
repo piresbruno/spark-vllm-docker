@@ -2,14 +2,6 @@
 .env-*
 build-metadata.yaml
 .DS_STORE
-
-# Python bytecode and tool caches
-**/__pycache__/
-**/*.py[cod]
-**/.pytest_cache/
-**/.mypy_cache/
-**/.ruff_cache/
-
 .wheel-cache/
 mods/draft
 recipes/backups
@@ -19,3 +11,8 @@ benchmark-plots
 backup-wheels
 .codex
 wheels
+# Python bytecode
+__pycache__/
+*.py[cod]
+.DS_Store
+._*
